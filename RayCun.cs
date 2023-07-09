@@ -12,13 +12,16 @@ using UnityEngine;
 
 // 역할 : Mode를 구분해서 단발/연사 모드
 // Mode (pistol, rifle) , 다음 발사 시간, 발사 쿨타임
+
+//역할 : Enemy를 쏘면 Enemy에게 Damage를 입힌다
+// - 총의 데미지, 
 public class RayCun : MonoBehaviour
 {
     public ParticleSystem impactEffect; //효과
     public Transform firePos; //총구
     public AudioSource impactaudio;
 
-    private Camera mainCam; //최적화
+    public Camera mainCam; //최적화
 
     public enum Mode { Pistol, Rifle }
     public Mode mode = Mode.Pistol;
@@ -26,7 +29,9 @@ public class RayCun : MonoBehaviour
     public float fireRate = 10f; //연사율
     private Vector3 randomMousePos; //반동 구현
 
-    // Start is called before the first frame update
+   
+
+    
     void Start()
     {
         impactaudio = GetComponent<AudioSource>();
@@ -79,7 +84,7 @@ public class RayCun : MonoBehaviour
         
 
         // 1. Ray 생성 : 위치(firePos), 방향(firePos의 Z축, Camera가 바라보는 정중앙의 방향) , 거리
-        //Vector3 direction = Camera.main.ScreenPointToRay(Input.mousePosition).direction;
+        //Vector3 direction = mainCam.ScreenPointToRay(Input.mousePosition).direction;
         Ray ray = mainCam.ScreenPointToRay(randomMousePos);
         //Ray ray = new Ray(firePos.position, direction);
         // 2. RaycastHit 생성 : 부딪힌 곳 정보
@@ -87,9 +92,35 @@ public class RayCun : MonoBehaviour
         // 3. Raycast ... (1)번에서 생성한 Ray를 발사
         int layer = 1 << LayerMask.NameToLayer("Player") | 1 << LayerMask.NameToLayer("Weapon");
         // 4. 부딪혔는지 안 부딪혔는지 충돌체크
-        if (Physics.Raycast(ray, out hitInfo, Mathf.Infinity, ~layer)) //(선, 부딪힐정보저장, 거리);
+        if (Physics.Raycast(ray, out hitInfo, Mathf.Infinity, ~layer)) //(선, 부딪힐정보저장, 거리, layer 이진수 반전);
         {
-             // 5. ImpactEffect를 부딪힌 곳에 위치
+            //부딪힌 물체가 enemy라면 데미지를 입힌다 -> Tag
+            /*if (hitInfo.collider.tag == "Enemy")
+            {
+                print("EnemyHp--");
+            }*/
+            if (hitInfo.transform.CompareTag("Enemy"))
+            {
+                IDamage enemy = hitInfo.transform.GetComponent<IDamage>(); //0. IDamage 인터페이스가 달려있다면
+                if (enemy != null) {
+                    enemy.DamageProcess(); //Damage 입힌다
+                 }
+
+               /* 풀이
+                Enemy enemy = hitInfo.transform.GetComponent<Enemy>();
+                if (enemy != null)
+                {
+                    enemy.DamageProcess();
+                }
+                NavEnemy navEnemy = hitInfo.transform.GetComponent<NavEnemy>();
+                if (navEnemy != null)
+                {
+                    navEnemy.DamageProcess();
+                }
+                */
+            }
+
+            // 5. ImpactEffect를 부딪힌 곳에 위치
             impactEffect.transform.position = hitInfo.point;
             // 5-1. 부딪힌 곳에서 수직으로 Effect 의 방향을 회전시켜준다. 
             impactEffect.transform.forward = hitInfo.normal;
@@ -101,5 +132,37 @@ public class RayCun : MonoBehaviour
         }
         impactaudio.Stop();
         impactaudio.Play();
+    }
+
+    private void OnDrawGizmos() //레이저사이트 만들기
+    {
+        //1. Gizmo용 Ray를 생성한다.
+        //Ray ray = mainCam.ScreenPointToRay(Input.mousePosition);
+        Ray ray = new Ray (mainCam.transform.position, mainCam.transform.forward);
+        //2. Gizmo용 RayCastHit을 생성한다.
+        RaycastHit hitInfo;
+        // + 충돌 제외할 Layer 설정 (Player, Weapon)
+        int layer = 1 << LayerMask.NameToLayer("Player") | 1<< LayerMask.NameToLayer("Weapon");
+        //3. Gizmo용 Ray를 발사한다.
+        if (Physics.Raycast(ray, out hitInfo, Mathf.Infinity)) //(ray, 정보그릇, 길이)
+        {
+            
+            Gizmos.color = Color.red; 
+            Gizmos.DrawLine(ray.origin, hitInfo.point); // (ray 시작점, 끝점)
+
+        } else
+        {
+            Gizmos.color = Color.white;
+            // Ray의 시작점 위치 : ray.origin 
+            Vector3 startPos = ray.origin;
+            //Ray의 끝점 위치 : 시작점 + ray의 방향 * ray를 그릴 거리 (p=p0+vt)
+            Vector3 endPos = startPos + ray.direction * 100f;
+            //b-1. Gizmo용 Ray의 원래 길이(100)만큼 그려준다.
+            Gizmos.DrawLine(startPos, endPos);
+        }
+        //3-a. Gizmo용 Ray가 어딘가에 부딪힌 경우
+        // a-1. 부딪힌 위치까지만 Gizmo용 Ray를 그려준다.
+        //3-b. Gizmo용 Ray가 부딪히지 않은 경우
+        //b-1. Gizmo용 Ray의 원래 길이 (Mathf.Infinity) 만큼 그려준다.
     }
 }

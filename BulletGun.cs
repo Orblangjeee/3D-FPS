@@ -48,7 +48,7 @@ public class BulletGun : MonoBehaviour
     // 총알을 발사할 때 Effect 
     public ParticleSystem muzzleFlashEffect;
     // 총알을 발사할 때 효과음 사운드
-    public AudioSource audio;
+    public AudioSource audios;
 
     // ----- 연사 모드 -----
     public enum Mode
@@ -142,6 +142,9 @@ public class BulletGun : MonoBehaviour
             bulletPool[i].gameObject.SetActive(false);
             // 2-4. 총알을 진짜진짜진짜 탄창에 넣는다.
             bulletPoolList.Add(bulletPool[i]);
+
+            // + 총알이 돌아가야할 탄창도 함께 알려준다.
+            bulletPool[i].GetComponent<Bullet>().InitMyGun(this); //BulletGun 펌웨어업데이트
         }
     }
 
@@ -160,8 +163,8 @@ public class BulletGun : MonoBehaviour
         // 5. 탄창에서 사용한 (첫 번째)총알을 제거한다.
         bulletPoolList.RemoveAt(0);
         // 6. 총알 발사 사운드 재생
-        audio.Stop();
-        audio.Play();
+        audios.Stop();
+        audios.Play();
 
     }
 

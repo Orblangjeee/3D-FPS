@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.PackageManager;
 using UnityEngine;
 
 // 역할 : 총알을 앞으로 날아가게 하고 싶다.
@@ -15,8 +16,12 @@ using UnityEngine;
 //  - 일정시간 (lifeTime)
 //  - 경과시간 (currentTime)
 
+//[문제] SwitchWeapon.cs 에서 총알이 아직 탄창으로 돌아가지 않았는데 BulletGun.cs을 비활성화한 경우, 총알이 탄창으로 돌아가지 못해 Error가 뜸
+//[해결] 내가 돌아가야할 탄창을 알려줌
 public class Bullet : MonoBehaviour
 {
+    //내가 돌아가야할 총(BulletGun.cs)
+    private BulletGun myGun;
     // 속력 : 총알이 날아가는 속력
     public float moveSpeed = 10f;
     // Rigidbody Component 
@@ -57,7 +62,7 @@ public class Bullet : MonoBehaviour
         if (currentTime > lifeTime)
         {
             // 3. 총알(=나 자신)을 탄창에 다시 넣는다.
-            FindObjectOfType<BulletGun>().DeactiveBullet(gameObject);
+            myGun.DeactiveBullet(gameObject);
         }
     }
 
@@ -70,9 +75,29 @@ public class Bullet : MonoBehaviour
     // 총알이 어딘가에 부딪히면,
     private void OnCollisionEnter(Collision collision)
     {
+        
+        if (collision.transform.CompareTag("Enemy"))
+        {
+            IDamage enemy = collision.transform.GetComponent<IDamage>(); //0. IDamage 인터페이스가 달려있다면
+            if (enemy != null)
+            {
+                enemy.DamageProcess(); //Damage 입힌다
+            }
+            /* 풀이
+            Enemy enemy = collision.transform.GetComponent<Enemy>();
+            enemy.DamageProcess(); //Enemy에 Damage 입히기
+            */
+        }
+
         // + 총알의 위치에 부딪힌 특수효과를 재생한다.
-        FindObjectOfType<BulletGun>().PlayImpactEffect(transform.position);
+        myGun.PlayImpactEffect(transform.position);
         // 3. 총알(=나 자신)을 탄창에 다시 넣는다.
-        FindObjectOfType<BulletGun>().DeactiveBullet(gameObject);
+        myGun.DeactiveBullet(gameObject);
+    }
+
+    //내가 돌아가야할 탄창을 알려준다
+    public void InitMyGun(BulletGun bulletGun) //BulletGun 펌웨어업데이트
+    {
+        myGun = bulletGun;
     }
 }
